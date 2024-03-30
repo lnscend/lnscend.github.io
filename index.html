@@ -3,70 +3,262 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vertical Split with Scrollable Middle Section</title>
-<style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-    }
-
-    .container {
-        display: flex;
-        height: 100%;
-    }
-
-    .section {
-        flex: 1;
-        border: 1px solid #000;
-        overflow: auto;
-    }
-
-    .middle-section {
-        overflow-y: auto;
-    }
-
-    ul {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    li {
-        padding: 10px;
-        border-bottom: 1px solid #ccc;
-    }
-</style>
+<title>WhatsApp Export Beautifier</title>
+<link href="style.css" rel="stylesheet">
 </head>
 <body>
 
 <div class="container">
-    <div class="section">Section 1</div>
-    <div class="section middle-section">
-        <ul>
-            <!-- Populate with sample list items -->
-            <li>Item 1</li>
-            <li>Item 2</li>
-            <li>Item 3</li>
-            <li>Item 4</li>
-            <li>Item 5</li>
-            <li>Item 6</li>
-            <li>Item 7</li>
-            <li>Item 8</li>
-            <li>Item 9</li>
-            <li>Item 10</li>
-            <li>Item 11</li>
-            <li>Item 12</li>
-            <li>Item 13</li>
-            <li>Item 14</li>
-            <li>Item 15</li>
-            <li>Item 16</li>
-            <li>Item 17</li>
-        </ul>
+    <div class="section left-section">
+        <div class="section-title">Search Panel</div>
+        <div class="input-container">
+            <input id="search-box" type="text" class="search-input" placeholder="Search..." oninput="LoadResults()" disabled>
+        </div>
+        <br>
+        <br>
+        <div class="input-container">
+            <label class="label" for="start-date">Start Date:</label>
+            <input type="date" class="date-input" id="start-date" placeholder="Start Date" onchange="LoadResults()">
+        </div>
+        <div class="input-container">
+            <label class="label" for="end-date">End Date:</label>
+            <input type="date" class="date-input" id="end-date" placeholder="End Date" onchange="LoadResults()">
+        </div>
+        <br>
+        <br>
+        <div class="input-container jump-to-date-container">
+            <label class="label" for="jump-to-date">Jump to date:</label>
+            <input type="date" class="date-input" id="jump-to-date" placeholder="Jump to date" onchange="toggleJumpButton()">
+            <button id="jump-button" onclick="LoadData(currentData, MessageJumpSearch(new Date(document.getElementById('jump-to-date').value) - (1000 * 60 * 60 * 8)).index)" disabled>Jump</button>
+            <button id="random-button" class="random-button" onclick="LoadData(currentData, MessageJumpSearch().index)" disabled>Random</button>
+        </div>
+        <br>
+        <div class="input-container">
+            <label class="label" for="user-switch">Upload WhatsApp chat</label>
+            <input type="file" id="fileInput" onchange="ReceiveFile()">
+            <br>
+            <!-- <button id="file-upload" onclick="LoadChat()" disabled>Load imported chat</button> -->
+            <button id="interlocutor-switch" onclick="SwitchInterlocutors()" disabled>Switch interlocutors</button>
+        </div>
+
     </div>
-    <div class="section">Section 3</div>
+    <div id="central-display" class="section middle-section" onscroll="HandleScroll(event)">
+        <div class="message other">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+            <span class="timestamp">31 Mar 24, 12:34</span>
+        </div>
+        <div class="message me">
+            Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+            <span class="timestamp">2 Apr 24, 11:15</span>
+        </div>
+    </div>
+    <div class="section right-section">
+        <div class="section-title">Search Results</div>
+        <div id="results-display" class="search-results">
+            <div class="result message other">Lorem ipsum dolor sit amet, consectetur adipiscing elit.<br><br><span class="timestamp">31 Mar 24, 12:34</span></div>
+            <div class="result message me">Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.<br><br><span class="timestamp">2 Apr 24, 11:15</span></div>
+        </div>
+    </div>
 </div>
+
+<script>
+    function LoadResults() {
+        const searchText = document.getElementById('search-box').value;
+        const messageResults = MessageInputSearch(searchText, [new Date(document.getElementById('start-date').value || 0), new Date(document.getElementById('end-date').value || Date.now())]);
+        const resultsDisplay = document.getElementById('results-display');
+        resultsDisplay.innerHTML = '';
+        messageResults.forEach(message => {
+            resultsDisplay.insertAdjacentHTML('beforeend', `<div class="result message ${(switchSenders ? message.sender !== firstSender : message.sender === firstSender) ? 'other' : 'me'}" onclick="ClickedResult(${message.index})">${message.content.replace(/\n/g, '<br>')}<br><span class="timestamp">${message.timestamp}</span></div>`);
+        });
+    };
+    
+    function ClickedResult(index) {
+        console.log("Message clicked:", messages[index]);
+        LoadData(currentData, index);
+    };
+
+    function dateRangeFunction() {
+        console.log("Date range changed");
+        var startDateInput = document.getElementById("start-date");
+        var endDateInput = document.getElementById("end-date");
+        
+        startDateInput.setAttribute("max", endDateInput.value);
+        endDateInput.setAttribute("min", startDateInput.value);
+        toggleJumpButton();
+    }
+
+    function toggleJumpButton() {
+        if (!currentData) return;
+        const jumpButton = document.getElementById("jump-button");
+        const jumpToDateInput = document.getElementById("jump-to-date").value;
+        if (jumpToDateInput) {
+            jumpButton.disabled = false;
+        } else {
+            jumpButton.disabled = true;
+        }
+    }
+
+    function jumpToDate() {
+        var jumpToDateInput = document.getElementById("jump-to-date").value;
+        console.log("Jumping to date: " + jumpToDateInput);
+    }
+
+    function randomFunction() {
+        console.log("Random button clicked");
+    }
+    
+    const months = ' Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+
+    const maxResultsDisplayed = 400;
+    
+    function MessageInputSearch(text='', dateRange) {
+        const textMatches = messages.filter(message => message.content.toLowerCase().includes(text.toLowerCase()));
+        return dateRange ? textMatches.filter(message => {
+            const stamp = new Date(message.timestamp);
+            return stamp > dateRange[0] && stamp < dateRange[1];
+        }).slice(0, Math.min(textMatches.length, maxResultsDisplayed)) : textMatches.slice(0, Math.min(textMatches.length, maxResultsDisplayed));
+    };
+
+    function MessageJumpSearch(date) {
+        return date ? messages.find(x => new Date(x.timestamp) > new Date(date)) : messages[~~(Math.random() * messages.length)];
+    };
+
+    let currentData;
+    let switchSenders = false;
+    let messages;
+    let firstSender;
+    
+    function LoadData(data, position=0) {
+        const centralDisplay = document.getElementById('central-display');
+        centralDisplay.innerHTML = '';
+        messages = data.replaceAll('‎', '').split(/(?=\[\d+\/\d+\/\d+, \d+:\d+:\d+\])/g).map((line, index) => {
+            const point1 = line.indexOf(']');
+            const point2 = line.indexOf(': ');
+            const sender = line.slice(point1 +  2, point2);
+            
+            if (!firstSender) firstSender = sender;
+            return {
+                index,
+                timestamp: line.slice(1, point1).replace(/\/(\d{1,2})\//, (_, x) => ' ' + months[x] + ' '),
+                sender,
+                content: line.slice(point2 + 2)
+            };
+        });
+        messages.forEach((line, i) => {
+            if (i < position - 100 || i > position + 100) return;
+            const msgContent = line.content.replace(/\n/g, '<br>');
+            centralDisplay.insertAdjacentHTML('beforeend', `<div index="${line.index}" class="message ${(switchSenders ? line.sender !== firstSender : line.sender === firstSender) ? 'other' : 'me'}">${msgContent}<span class="timestamp">${line.timestamp}</span></div>`);
+        });
+        currentData = data;
+        
+        if (position) {
+            document.querySelector(`#central-display div[index="${position}"]`).scrollIntoView({
+                behavior: 'auto',
+                block: 'start',
+                inline: 'nearest'
+            });
+            centralDisplay.scrollBy(0, -17);
+        };
+        /*
+        let totalHeight = 0;
+        centralDisplay.childNodes.forEach((v, i) => i <= 100 ? totalHeight += v.offsetHeight : null);
+        centralDisplay.childNodes.forEach(v => console.log(v));
+        console.log(totalHeight);
+        scrollTop = totalHeight - 500;
+        */
+        
+        LoadResults();
+        'random-button interlocutor-switch search-box'.split(' ').forEach(x => document.getElementById(x).disabled = false);
+    };
+    // on Interlocutor Switch, inverse otherSender;
+    
+    function SwitchInterlocutors() {
+        switchSenders = !switchSenders;
+        LoadData(currentData, +document.getElementById('central-display').firstElementChild.getAttribute('index') + 100);
+        LoadResults();
+    };
+    
+    function ReceiveFile() {
+        // Get the file input element
+        var fileInput = document.getElementById('fileInput');
+
+        // Check if files are selected
+        if (fileInput.files.length) {
+            // Get the selected file
+            var file = fileInput.files[0];
+
+            // Create a FileReader object
+            var reader = new FileReader();
+
+            // Set up event handler for when the file is loaded
+            reader.onload = function(event) {
+                // Display the content of the file
+                var fileContent = event.target.result;
+                LoadData(fileContent);
+                // Here, you can perform actions with the file content, such as displaying it on the page or sending it to a server.
+            };
+
+            // Read the file as text
+            reader.readAsText(file);
+        };
+    };
+    // $(document).scrollTop($(document).scrollTop() + elmHeight);
+    
+    let handleScroll = true;
+    
+    function removeChildren(fromTop, parentElement, count) {
+        for (let i = 0; i < count; i++) {
+            if (fromTop) {
+                if (parentElement.firstElementChild) {
+                    parentElement.removeChild(parentElement.firstElementChild);
+                } else {
+                    break;
+                };
+            } else {
+                if (parentElement.lastElementChild) {
+                    parentElement.removeChild(parentElement.lastElementChild);
+                } else {
+                    break;
+                };
+            };
+        };
+    };
+    
+    function HandleScroll(event) {
+        if (!handleScroll) return;
+        const element = event.target;
+        const fullHeight = element.scrollHeight - element.clientHeight;
+        if (element.scrollTop > (fullHeight * 3 / 4)) { // lower scroll-bound
+            handleScroll = false;
+            setTimeout(() => handleScroll = true, 490);
+            const lastLoaded = +document.getElementById('central-display').lastElementChild.getAttribute('index');
+            let insertionCount = 0;
+            const pendingLines = [];
+            messages.forEach((line, i) => {
+                if (i <= lastLoaded || i > (lastLoaded + 50)) return;
+                insertionCount++;
+                const msgContent = line.content.replace(/\n/g, '<br>');
+                pendingLines.push(`<div index="${line.index}" class="message ${(switchSenders ? line.sender !== firstSender : line.sender === firstSender) ? 'other' : 'me'}">${msgContent}<span class="timestamp">${line.timestamp}</span></div>`);
+            });
+            document.getElementById('central-display').insertAdjacentHTML('beforeend', pendingLines.join('\n'));
+            removeChildren(true, document.getElementById('central-display'), insertionCount);
+        } else if (element.scrollTop < fullHeight / 4) { // upper scroll-bound
+            handleScroll = false;
+            setTimeout(() => handleScroll = true, 490);
+            const firstLoaded = +document.getElementById('central-display').firstElementChild.getAttribute('index');
+            let insertionCount = 0;
+            const pendingLines = [];
+            messages.forEach((line, i) => {
+                if (i < firstLoaded - 50 || i >= firstLoaded) return;
+                insertionCount++;
+                const msgContent = line.content.replace(/\n/g, '<br>');
+                pendingLines.push(`<div index="${line.index}" class="message ${(switchSenders ? line.sender !== firstSender : line.sender === firstSender) ? 'other' : 'me'}">${msgContent}<span class="timestamp">${line.timestamp}</span></div>`);
+            });
+            document.getElementById('central-display').insertAdjacentHTML('afterbegin', pendingLines.join('\n'));
+            removeChildren(false, document.getElementById('central-display'), insertionCount);
+        };
+    };
+</script>
 
 </body>
 </html>
